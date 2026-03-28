@@ -51,6 +51,7 @@ Principales hallazgos
 •	Entre 1990 y 2025, la aviación comercial alcanza sus niveles más bajos de accidentes y muertes.
 
 Reflexión final
+
 Este análisis confirma que, a pesar de la percepción pública, volar es hoy más seguro que nunca. La combinación de tecnología, regulación, entrenamiento y cultura de seguridad ha transformado la aviación comercial en uno de los medios de transporte más confiables del mundo.
 
 
