@@ -1,4 +1,5 @@
-Análisis exploratorio de accidentes de aviación comercial (1908–2025)
+#Análisis exploratorio de accidentes de aviación comercial (1908–2025)
+
 Este proyecto forma parte de mi portafolio de análisis de datos y tiene como objetivo explorar la evolución de los accidentes de aviación comercial desde 1908 hasta 2025. A través de técnicas de limpieza, transformación y visualización de datos en R, analizo tendencias históricas, categorías de accidentes, fatalidades y patrones temporales para responder a una pregunta clave:
 ¿Qué tan seguro es volar?
 
