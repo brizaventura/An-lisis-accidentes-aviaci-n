@@ -1,0 +1,330 @@
+---
+title: "AIRCRAFT ACCIDENTS"
+author: "briza"
+date: "2026-03-27"
+output: html_document
+---
+
+# ¿Qué tan seguro es volar? Un análisis exploratorio de accidentes de aviones comerciales desde 1908
+
+El transporte aéreo suele generar una mezcla de fascinación y temor. A pesar de que volar es parte cotidiana de la vida moderna, muchas personas siguen percibiendo los aviones como un medio riesgoso. Sin embargo, los registros históricos muestran una realidad distinta: la aviación comercial ha evolucionado hasta convertirse en uno de los sistemas de transporte más seguros del mundo.
+Para este proyecto, analizaré un conjunto de datos que recopila accidentes aéreos desde principios del siglo XX. El objetivo es comprender cómo han cambiado los incidentes a lo largo del tiempo y evaluar, con evidencia, el nivel real de seguridad en la aviación.
+A partir de este análisis, buscaré responder preguntas clave que permitan contextualizar el riesgo asociado a volar y entender qué factores influyen en la ocurrencia y gravedad de los accidentes.
+
+
+```{r}
+#comenzaremos instalando los paquetes y librerias necesarias
+#install.packages("tidyverse")
+#install.packages("stringr")
+#install.packages("magrittr")
+#install.packages("janitor")
+#install.packages("skimr")
+#install.packages("ggsci")
+library(ggsci)
+library(tidyverse)
+library(stringr)
+library(magrittr)
+library(janitor)
+library(skimr)
+library(lubridate)
+library(readr)
+library(dplyr)
+library(ggplot2)
+library(plotly)
+
+```
+
+```{r}
+#instalando nuestra date de basos
+aviation_accident_data_2023_05_16 <- read_csv("C:/Users/Ventu/Downloads/archive (2)/aviation-accident-data-2023-05-16.csv")
+
+#conociendo la base
+View(aviation_accident_data_2023_05_16)
+str(aviation_accident_data_2023_05_16)
+```
+
+Limpiando nuestra base de datos
+
+```{r}
+
+#quitando duplicados
+air2<-unique(aviation_accident_data_2023_05_16)
+duplicated(aviation_accident_data_2023_05_16)
+
+#cambiando valores nulos 
+air2$date <- as.character(air2$date)
+air2$date <- na_if(air2$date, "unknown")
+air2$date <- na_if(air2$date, "Unknown country")
+air2$date <- na_if(air2$date, "?")
+air2$date <- na_if(air2$date, "date unk.")
+
+#cambiando date formato fecha
+air2 <- air2 %>%
+  mutate(
+    date_parsed = parse_date_time(date, orders = "d-b-Y"),
+    year  = year(date_parsed),
+    month = month(date_parsed),
+    day   = day(date_parsed)
+  )
+
+#revisar
+class(air2$date)
+str(air2)
+air2 %>% count(is.na(date_parsed))
+class(air2$date_parsed)
+head(air2$date_parsed)
+
+```
+
+El dataset está mezclando dos tipos de fatalidades en una sola columna,por eso las vamos a separar en dos columnas distintas.
+
+```{r}
+  # separar fatalidades
+air2 <- air2 %>%
+  separate(
+    fatalities,
+    into = c("aircraft_fatality", "ground_fatality"),
+    sep = "\\+",
+    fill = "right",
+    remove = FALSE
+  ) %>%
+  
+  # convertir a numérico
+  mutate(
+    aircraft_fatality = parse_number(aircraft_fatality),
+    ground_fatality   = parse_number(ground_fatality),
+    
+    # extraer componentes de fecha
+    year  = year(date_parsed),
+    month = month(date_parsed, label = TRUE),
+    day   = day(date_parsed))
+
+#revisar
+tail(air2)
+```
+
+
+```{r}
+#creamos una nueva columna para total fatalities 
+air2<- air2 %>% 
+  mutate(total_fatalities= aircraft_fatality+ground_fatality)
+#revisar
+colnames(air2) 
+```
+
+```{r}
+# tabla limpia solo con variables que necesito para el análisis.
+air2<- select(air2, date, year, day, month, type, registration, operator, location, country, cat, aircraft_fatality, ground_fatality, total_fatalities)
+#revisar
+head(air2)
+#Ordena el dataset de mayor a menor número de fatalidades dentro del avión
+air2 %>%
+  arrange(desc(aircraft_fatality))
+
+```
+
+ANALISIS DESCRIPTIVO
+
+```{r}
+dim(air2)
+```
+Han habido 23852 accidentes hay en total entre el 2 de Agosto de 1919 y 15 de Julio de 2023
+Mi dataset contiene 13 variables, las cuales son: aircraft_accident, date, year, day, month, type, registration, operator, location, country, cat, aircraft_fatality, ground_fatality, total_fatalities
+
+```{r}
+sum(air2$aircraft_fatality, na.rm = T)
+sum(air2$ground_fatality, na.rm = T)
+sum(is.na(air2$total_fatalities))
+```
+
+De estos 23852 accidentes han habido 127764 muertes de personas que murieron a bordo del avión y 4958 muertes en tierra como consecuencia del accidente.
+Al sumar las fatalidades dentro de la aeronave y en tierra, se observa que la gran mayoría de muertes asociadas a accidentes aéreos corresponden a personas a bordo, mientras que las fatalidades en tierra representan un porcentaje muy pequeño del total. Esto refuerza la idea de que, aunque los accidentes aéreos pueden ser catastróficos, su impacto sobre personas que no están en el avión es relativamente bajo.
+
+```{r}
+#Top 10 accidentes aéreos con más muertes
+library(ggplot2)
+library(dplyr)
+
+top_fatal <- air2%>%
+  arrange(desc(total_fatalities)) %>%
+  slice(1:10)
+
+ggplot(top_fatal, aes(x = reorder(location, total_fatalities),
+                      y = total_fatalities,
+                      fill = country)) +
+  geom_col() +
+  coord_flip() +
+  labs(title = "Top 10 accidentes aéreos con más muertes",
+       x = "Ubicación",
+       y = "Fatalidades totales",
+       fill = "País") +
+  theme_minimal()
+
+```
+
+```{r}
+library(plotly)
+#número de muertes por año
+#Filtrar años válidos
+air2 <- air2 %>%
+  filter(!is.na(year), year >= 1900, year <= 2023)
+
+#Agrupar por año
+fatal_year1 <- air2 %>%
+  group_by(year) %>%
+  summarise(total = sum(total_fatalities, na.rm = TRUE))
+
+#Graficar
+a <- ggplot(fatal_year1, aes(x = year, y = total)) +
+  geom_line(color = "red", size = 1) +
+  geom_point(color = "black", size = 1) +
+  labs(
+    title = "Número de fatalidades en accidentes aereos por año ",
+    x = "Año",
+    y = "Fatalidades"
+  ) +
+  theme_minimal()
+
+ggplotly(a)
+
+```
+
+A lo largo del tiempo, la aviación ha pasado de ser una actividad experimental a convertirse en uno de los medios de transporte más seguros del mundo. El gráfico revela esta transformación: los primeros años muestran variabilidad y picos frecuentes, mientras que las décadas recientes reflejan mayor estabilidad. El año 2001 rompe por completo esta tendencia, marcando un punto atípico en la historia de la aviación. Después de ese evento, la industria reforzó protocolos y estándares, logrando mantener niveles de seguridad notablemente altos.
+
+```{r}
+#Qué paso en 2001?
+accidentes_2001 <- air2 %>%
+  filter(year == 2001) %>%
+  select(date, operator, type, location, country, total_fatalities) %>%
+  arrange(desc(total_fatalities))
+accidentes_2001
+#total de muertes en 2001
+air2 %>%
+  filter(year == 2001) %>%
+  summarise(muertes_2001 = sum(total_fatalities, na.rm = TRUE))
+#total de accidentes
+air2 %>%
+  filter(year == 2001) %>%
+  count()
+#accidentes 11 de septiembre
+accidentes_2001 <- air2 %>%
+  filter(year == 2001) %>%
+  select(date, operator, type, location, country, total_fatalities) %>%
+  arrange(desc(total_fatalities))
+accidentes_2001
+
+```
+El año 2001 presenta un incremento excepcional en el número de fatalidades debido a los atentados del 11 de septiembre, en los que cuatro aeronaves comerciales fueron secuestradas y estrelladas deliberadamente. Este evento, único en la historia de la aviación, produjo un número de víctimas sin precedentes y altera significativamente la tendencia histórica de accidentes aéreos. Al excluir este evento extraordinario, la evolución anual de fatalidades mantiene una tendencia descendente coherente con las mejoras en seguridad aérea
+
+
+```{r}
+#Hablemos solo de aviones comerciales
+comercial1 <- air2 %>%
+  mutate(main_op = str_replace_all(operator, " -.*", "")) %>% 
+  filter(!str_detect(main_op, "[Mm]ilitary")) %>% 
+  filter(!str_detect(main_op, "[Pp]rivate")) %>% 
+  filter(main_op > "A")   # tu condición original
+
+#Pero excluyendo 11 de septiembre
+fatal_year_sin_11sep1 <- comercial1 %>%
+  filter(!(year == 2001 & month == "Sep" & day == 11)) %>%
+  group_by(year) %>%
+  summarise(total = sum(total_fatalities, na.rm = TRUE))
+
+#grafico
+c <- ggplot(fatal_year_sin_11sep1, aes(x = year, y = total)) +
+  geom_line(color = "red", size = 1) +
+  geom_point(color = "black", size = 1) +
+  labs(
+    title = "Muertes al año en aviones comerciales",
+    subtitle = "Excluyendo los atentados del 11 de septiembre de 2001",
+    x = "Año",
+    y = "Fatalidades"
+  ) +
+  theme_minimal()
+
+ggplotly(c)
+
+```
+
+
+```{r}
+#accidentes por año excluyendo el 11 de septiembre
+accidentes_comerciales_por_ano <- comercial1 %>%
+  filter(!(year == 2001 & month == "Sep" & day == 11)) %>% 
+  group_by(year) %>%
+  summarise(accidentes = n())
+
+#gráfico 
+d <- ggplot(accidentes_comerciales_por_ano, aes(x = year, y = accidentes)) +
+  geom_line(color = "blue", size = 1) +
+  geom_point(color = "black", size = 2) +
+  labs(
+    title = "Accidentes por año en aviones comerciales",
+    subtitle = "Excluyendo los atentados del 11 de septiembre de 2001",
+    x = "Año",
+    y = "Número de accidentes"
+  ) +
+  theme_minimal()
+
+ggplotly(d)
+
+```
+
+El año 1944 destaca por un número excepcionalmente alto de accidentes, pero este aumento no se refleja en las muertes registradas. Esto puede deberse a que muchos de esos accidentes fueron menos graves o a que las fatalidades no quedaron completamente documentadas, posiblemente por la calidad limitada de los registros históricos.
+
+```{r}
+#Qué paso en 1944 y 1945
+air2 %>% 
+  filter(year %in% c(1944, 1955)) %>% 
+  select(date, operator, type, location, cat, total_fatalities) %>% 
+  arrange(desc(total_fatalities))
+```
+Los picos observados en 1944 y 1955 tienen explicaciones históricas claras. En 1944, la aviación civil operaba en un contexto de guerra global, con aeronaves comerciales utilizadas para transporte militar, navegación limitada y un entorno extremadamente riesgoso. Esto generó un número excepcionalmente alto de accidentes. En 1955, el aumento del tráfico aéreo, los primeros sabotajes con explosivos y la transición tecnológica hacia aviones a reacción provocaron un incremento notable en incidentes y accidentes comerciales. Estos factores explican por qué estos años destacan en la serie histórica
+
+
+```{r}
+#enfocandonos en los ultimos a
+accidentes_comerciales_1990 <- comercial1 %>%
+  filter(year >= 1990, year <= 2025) %>% 
+  filter(!(year == 2001 & month == "Sep" & day == 11)) %>% 
+  group_by(year) %>%
+  summarise(accidentes = n())
+e <- ggplot(accidentes_comerciales_1990, aes(x = year, y = accidentes)) +
+  geom_line(color = "blue", size = 1) +
+  geom_point(color = "black", size = 2) +
+  labs(
+    title = "Accidentes por año en aviones comerciales (1990–2025)",
+    subtitle = "Excluyendo los atentados del 11 de septiembre de 2001",
+    x = "Año",
+    y = "Número de accidentes"
+  ) +
+  theme_minimal()
+
+ggplotly(e)
+```
+El gráfico muestra la evolución de los accidentes en aviones comerciales entre 1990 y 2025, excluyendo los atentados del 11 de septiembre de 2001. Se observa una tendencia general a la baja, reflejando mejoras continuas en la seguridad operacional, la tecnología aeronáutica y los procedimientos de las aerolíneas. Aunque existen fluctuaciones año a año, la disminución sostenida evidencia que la aviación comercial moderna es cada vez más segura.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
