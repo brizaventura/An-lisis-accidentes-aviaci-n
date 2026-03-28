@@ -1,9 +1,10 @@
-#Análisis exploratorio de accidentes de aviación comercial (1908–2025)
+Análisis exploratorio de accidentes de aviación comercial (1908–2025)
 
 Este proyecto forma parte de mi portafolio de análisis de datos y tiene como objetivo explorar la evolución de los accidentes de aviación comercial desde 1908 hasta 2025. A través de técnicas de limpieza, transformación y visualización de datos en R, analizo tendencias históricas, categorías de accidentes, fatalidades y patrones temporales para responder a una pregunta clave:
 ¿Qué tan seguro es volar?
 
 Objetivos del proyecto
+
 •	Limpiar y preparar una base de datos histórica de accidentes aéreos.
 •	Analizar la frecuencia de accidentes y fatalidades a lo largo del tiempo.
 •	Identificar outliers y eventos históricos relevantes.
@@ -11,17 +12,10 @@ Objetivos del proyecto
 •	Evaluar la seguridad de la aviación comercial moderna (1990–2025).
 •	Crear visualizaciones claras y profesionales con ggplot2 y plotly.
 
-Tecnologías utilizadas
-•	R
-•	tidyverse
-•	dplyr
-•	ggplot2
-•	plotly
-•	lubridate
-•	janitor
-•	skimr
+Tecnologías utilizadas: R, tidyverse , dplyr, ggplot2, plotly, lubridate, janitor, skimr
 
 Metodología
+
 1. Limpieza y preparación de datos
 - Eliminé duplicados y registros inconsistentes.
 - Reemplacé valores faltantes o no válidos en la columna de fecha.
@@ -45,10 +39,15 @@ Metodología
 
 
 Principales hallazgos
+
 •	La aviación comercial muestra una tendencia clara de mejora en seguridad, especialmente desde 1990.
+
 •	Aunque los accidentes no desaparecen, las fatalidades disminuyen de forma más pronunciada, indicando mayor capacidad de supervivencia.
+
 •	Las categorías A1 y A2 siguen siendo las más frecuentes, pero con menor severidad en décadas recientes.
+
 •	Los picos históricos (como 1944) no se reflejan en fatalidades, lo que sugiere accidentes menos severos o registros incompletos.
+
 •	Entre 1990 y 2025, la aviación comercial alcanza sus niveles más bajos de accidentes y muertes.
 
 Reflexión final
